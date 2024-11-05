@@ -14,7 +14,7 @@ with open(config_path, 'r') as f:
 logger = glog.GLogger(backupCount=3,
                       is_multiprocessing=False,
                       print_logs=True,
-                      log_dir=config['project_vars']['log_dir'])
+                      log_dir=config['other']['log_dir'])
 
 
 def insert_dataframe(df, table_name, unique_id_col, update=False, creds=config['SQL_credentials']):
