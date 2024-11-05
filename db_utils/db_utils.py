@@ -19,11 +19,11 @@ logger = glog.GLogger(backupCount=3,
 
 def insert_dataframe(df, table_name, unique_id_col, update=False, creds=config['SQL_credentials']):
     logger.glog("Start insert_dataframe function")
-
     """
     Inserts a pandas DataFrame into a PostgreSQL database table using SQLAlchemy,
     handling columns with dicts or lists.
     """
+
     # Create SQLAlchemy engine
     conn_str = f"postgresql+psycopg2://{creds['DB_USER']}:{creds['DB_PASSWORD']}@{creds['DB_HOST']}:{creds['DB_PORT']}/{creds['DB_NAME']}?sslmode=require"
 
@@ -117,7 +117,3 @@ def insert_dataframe(df, table_name, unique_id_col, update=False, creds=config['
         engine.dispose()
         logger.glog("Database connection closed")
 
-
-# if __name__ == '__main__':
-#     import glog
-#     logger = glog.GLogger(backupCount=3, is_multiprocessing=False)
