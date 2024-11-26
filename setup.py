@@ -2,7 +2,7 @@ from setuptools import setup, find_packages
 
 setup(
     name='db_utils',
-    version='1.0',
+    version='2.0',
     packages=find_packages(),
     description='Advanced PostGRE-SQL intreaction solution',
     long_description=open('README.md').read(),
