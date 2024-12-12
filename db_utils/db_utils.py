@@ -171,3 +171,98 @@ def insert_dataframe(df, table_name, unique_id_col, update=False, db_name=None):
 
         finally:
             logger.glog("Database connection closed")
+
+
+def get_instrument_identifier(
+        identifier_value,
+        identifier_type="instrument_id",
+        requested_identifier_type=None,
+        db_name=None
+    ):
+    """
+    Retrieve an identifier from the instrument_identifiers table.
+
+    :param identifier_value: Value of the identifier to search for.
+    :param identifier_type: Type of identifier to search by (default is 'instrument_id').
+    :param requested_identifier_type: Type of identifier to retrieve (default is the same as identifier_type).
+    :param db_name: Optional database name to use instead of the default.
+    :return: The requested identifier value or raises an error if not found or an issue occurs.
+    """
+    global _engine, _config, _default_db_name
+
+    # Ensure db_utils is initialized
+    if _engine is None or _default_db_name is None:
+        raise RuntimeError("db_utils is not initialized. Please call init_db_utils() before using this function.")
+
+    # Validate parameters
+    if not identifier_value or not identifier_type:
+        raise ValueError("Both identifier_value and identifier_type must be provided.")
+    if requested_identifier_type is None:
+        requested_identifier_type = identifier_type
+
+    logger.glog("Starting get_instrument_identifier function")
+
+    # Determine which database to use
+    if db_name is None:
+        db_name = _default_db_name
+        engine = _engine
+        logger.glog(f"Using default database '{db_name}'")
+    else:
+        if db_name not in _config['SQL_credentials']:
+            raise ValueError(f"Database configuration for '{db_name}' not found in config file.")
+        creds = _config['SQL_credentials'][db_name]
+        conn_str = (
+            f"postgresql+psycopg2://{creds['DB_USER']}:{creds['DB_PASSWORD']}@"
+            f"{creds['DB_HOST']}:{creds['DB_PORT']}/{creds['DB_NAME']}?sslmode=require"
+        )
+        engine = create_engine(conn_str)
+        logger.glog(f"Created SQLAlchemy engine for database '{db_name}'")
+
+    try:
+        with engine.connect() as connection:
+            logger.glog("Established connection to the database")
+            metadata = MetaData()
+            instrument_identifiers = Table(
+                "instrument_identifiers",
+                metadata,
+                autoload_with=engine,
+                schema="public"
+            )
+            logger.glog("Reflected instrument_identifiers table successfully")
+
+            # Build the query
+            query = (
+                instrument_identifiers.select()
+                .where(instrument_identifiers.c[identifier_type] == identifier_value)
+            )
+
+            logger.glog(f"Querying {identifier_type} with value '{identifier_value}'")
+            result = connection.execute(query).fetchall()
+
+            # Handle query results
+            if not result:
+                raise LookupError(f"No entries found for {identifier_type} = {identifier_value}")
+            elif len(result) > 1:
+                raise ValueError(f"Duplicate entries found for {identifier_type} = {identifier_value}")
+
+            logger.glog(f"Query successful: {result}")
+
+            # Retrieve the requested identifier type
+            identifier_data = result[0]
+            if requested_identifier_type not in identifier_data.keys():
+                raise ValueError(
+                    f"Requested identifier type '{requested_identifier_type}' does not exist in the table.")
+
+            return identifier_data[requested_identifier_type]
+
+    except LookupError as e:
+        logger.glog(f"Lookup error: {e}")
+        raise
+    except ValueError as e:
+        logger.glog(f"Value error: {e}")
+        raise
+    except Exception as e:
+        logger.glog(f"General error during database operation: {e}")
+        raise
+    finally:
+        logger.glog("Database connection closed")

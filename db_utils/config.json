@@ -1,9 +1,21 @@
 {
 	"SQL_credentials":
-	{
-		"tamar": {"DB_USER": "", "DB_PASSWORD": "", "DB_HOST": "", "DB_PORT": "", "DB_NAME": ""},
-		"other_db": {"DB_USER": "", "DB_PASSWORD": "", "DB_HOST": "", "DB_PORT": "", "DB_NAME": ""}
-	},
+		{
+			"tamar": {
+				"DB_USER": "",
+				"DB_PASSWORD": "",
+				"DB_HOST": "",
+				"DB_PORT": "",
+				"DB_NAME": ""
+			},
+			"other_db": {
+				"DB_USER": "",
+				"DB_PASSWORD": "",
+				"DB_HOST": "",
+				"DB_PORT": "",
+				"DB_NAME": ""
+			}
+		},
 	"other":{
 		"log_dir": null
 	}
