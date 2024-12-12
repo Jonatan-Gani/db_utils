@@ -1,14 +1,14 @@
 {
 	"SQL_credentials":
 		{
-			"tamar": {
+			"db_1": {
 				"DB_USER": "",
 				"DB_PASSWORD": "",
 				"DB_HOST": "",
 				"DB_PORT": "",
 				"DB_NAME": ""
 			},
-			"other_db": {
+			"db_2": {
 				"DB_USER": "",
 				"DB_PASSWORD": "",
 				"DB_HOST": "",
