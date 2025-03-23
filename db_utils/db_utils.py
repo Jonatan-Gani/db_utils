@@ -178,7 +178,7 @@ def get_instrument_identifier(
         identifier_type="instrument_id",
         requested_identifier_type=None,
         db_name=None
-    ):
+        ):
     """
     Retrieve an identifier from the instrument_identifiers table.
 
@@ -254,6 +254,189 @@ def get_instrument_identifier(
                     f"Requested identifier type '{requested_identifier_type}' does not exist in the table.")
 
             return identifier_data[requested_identifier_type]
+
+    except LookupError as e:
+        logger.glog(f"Lookup error: {e}")
+        raise
+    except ValueError as e:
+        logger.glog(f"Value error: {e}")
+        raise
+    except Exception as e:
+        logger.glog(f"General error during database operation: {e}")
+        raise
+    finally:
+        logger.glog("Database connection closed")
+
+
+def get_instrument_id(
+        input_value,
+        input_type="instrument_id",
+        output_type=None,
+        return_all=False,
+        db_name=None
+        ):
+    """
+    Flexible lookup function for instrument identifiers.
+
+    Retrieves instrument identifiers from the instrument_identifiers table using any identifier
+    type to find any other identifier type. Always returns structured results in JSON format for context.
+
+    :param input_value: Value of the identifier to search by
+    :param input_type: Type of identifier to search by (default is 'instrument_id')
+    :param output_type: Type of identifier to retrieve (if None, returns all types for that instrument)
+    :param return_all: If True, returns all matching rows. If False, returns only the first match.
+    :param db_name: Optional database name to use instead of the default.
+    :return:
+        - If return_all=False: A dict with the result and context information
+        - If return_all=True: A list of dicts with results and context information
+    :raises: LookupError if no matches found, ValueError for invalid inputs
+    """
+    global _engine, _config, _default_db_name
+
+    # Ensure db_utils is initialized
+    if _engine is None or _default_db_name is None:
+        raise RuntimeError("db_utils is not initialized. Please call init_db_utils() before using this function.")
+
+    # Validate parameters
+    if not input_value:
+        raise ValueError("input_value must be provided")
+
+    logger.glog(
+        f"Starting lookup_instrument_identifiers: input_value={input_value}, input_type={input_type}, output_type={output_type}")
+
+    # Determine which database to use
+    if db_name is None:
+        db_name = _default_db_name
+        engine = _engine
+        logger.glog(f"Using default database '{db_name}'")
+    else:
+        if db_name not in _config['SQL_credentials']:
+            raise ValueError(f"Database configuration for '{db_name}' not found in config file.")
+        creds = _config['SQL_credentials'][db_name]
+        conn_str = (
+            f"postgresql+psycopg2://{creds['DB_USER']}:{creds['DB_PASSWORD']}@"
+            f"{creds['DB_HOST']}:{creds['DB_PORT']}/{creds['DB_NAME']}?sslmode=require"
+        )
+        engine = create_engine(conn_str)
+        logger.glog(f"Created SQLAlchemy engine for database '{db_name}'")
+
+    try:
+        with engine.connect() as connection:
+            logger.glog("Established connection to the database")
+            metadata = MetaData()
+
+            # Reflect the tables
+            instrument_identifiers = Table(
+                "instrument_identifiers",
+                metadata,
+                autoload_with=engine,
+                schema="public"
+            )
+            logger.glog("Reflected instrument_identifiers table")
+
+            # Build the query based on input type
+            if input_type == "instrument_id":
+                # Direct lookup by instrument_id
+                query = (
+                    instrument_identifiers.select()
+                    .where(instrument_identifiers.c.instrument_id == input_value)
+                )
+                logger.glog(f"Querying by instrument_id={input_value}")
+            else:
+                # Look up rows where identifier_type matches input_type and identifier_value matches input_value
+                query = (
+                    instrument_identifiers.select()
+                    .where(
+                        (instrument_identifiers.c.identifier_type == input_type) &
+                        (instrument_identifiers.c.identifier_value == input_value)
+                    )
+                )
+                logger.glog(f"Querying by identifier_type={input_type} and identifier_value={input_value}")
+
+            # Execute the query
+            result = connection.execute(query).fetchall()
+
+            if not result:
+                raise LookupError(f"No entries found for {input_type}={input_value}")
+
+            logger.glog(f"Found {len(result)} matching records")
+
+            # Get all instrument IDs from the initial query
+            instrument_ids = [row.instrument_id for row in result]
+
+            # If looking for a specific output_type
+            if output_type:
+                if output_type == "instrument_id":
+                    # Format instrument_id results with context
+                    output_results = []
+                    for row in result:
+                        output_results.append({
+                            "instrument_id": row.instrument_id,
+                            "id": row.instrument_id,  # The actual value
+                            "id_type": "instrument_id",
+                            "input_value": input_value,
+                            "input_type": input_type
+                        })
+                else:
+                    # Query for the specific output_type
+                    output_query = (
+                        instrument_identifiers.select()
+                        .where(
+                            (instrument_identifiers.c.instrument_id.in_(instrument_ids)) &
+                            (instrument_identifiers.c.identifier_type == output_type)
+                        )
+                    )
+
+                    output_result = connection.execute(output_query).fetchall()
+
+                    if not output_result:
+                        raise LookupError(f"No {output_type} found for {input_type}={input_value}")
+
+                    # Format results with context
+                    output_results = []
+                    for row in output_result:
+                        output_results.append({
+                            "instrument_id": row.instrument_id,
+                            "id": row.identifier_value,  # The actual value
+                            "id_type": output_type,
+                            "input_value": input_value,
+                            "input_type": input_type
+                        })
+            else:
+                # Query all identifier types for these instrument IDs
+                all_ids_query = (
+                    instrument_identifiers.select()
+                    .where(instrument_identifiers.c.instrument_id.in_(instrument_ids))
+                )
+
+                all_results = connection.execute(all_ids_query).fetchall()
+
+                # Group by instrument_id
+                grouped_results = {}
+                for row in all_results:
+                    if row.instrument_id not in grouped_results:
+                        grouped_results[row.instrument_id] = {
+                            "instrument_id": row.instrument_id,
+                            "identifiers": [],
+                            "input_value": input_value,
+                            "input_type": input_type
+                        }
+
+                    grouped_results[row.instrument_id]["identifiers"].append({
+                        "id": row.identifier_value,
+                        "id_type": row.identifier_type
+                    })
+
+                # Format into a list
+                output_results = list(grouped_results.values())
+
+            # Return as a list or single item
+            if return_all:
+                logger.glog(f"Returning list of {len(output_results)} results")
+                return output_results
+            else:
+                logger.glog(f"Returning single result")
+                return output_results[0]
 
     except LookupError as e:
         logger.glog(f"Lookup error: {e}")
