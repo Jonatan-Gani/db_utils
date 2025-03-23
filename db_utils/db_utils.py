@@ -207,7 +207,7 @@ def get_instrument_identifier(
 
         db_name = _default_db_name
         engine = _engine
-        logger.glog(f"Using default database '{db_name}'")
+        logger.glog(f"Using  default database '{db_name}'")
     else:
         if db_name not in _config['SQL_credentials']:
             raise ValueError(f"Database configuration for '{db_name}' not found in config file.")
