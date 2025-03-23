@@ -204,6 +204,7 @@ def get_instrument_identifier(
 
     # Determine which database to use
     if db_name is None:
+
         db_name = _default_db_name
         engine = _engine
         logger.glog(f"Using default database '{db_name}'")
