@@ -20,7 +20,7 @@ contourpy==1.2.0
 croniter==5.0.1
 cryptography==44.0.2
 cycler==0.12.1
-db_utils @ git+https://github.com/Jonatan-Gani/db_utils@7f61b9e1470ee04ffb04a5b8d597844da6e2d701
+db_utils @ git+https://github.com/Jonatan-Gani/db_utils.git@dae82e2a2581fd15e6e4d5e717e964728e7ea409
 debugpy==1.8.12
 decorator==5.1.1
 defusedxml==0.7.1
@@ -32,7 +32,7 @@ Flask==3.1.0
 fonttools==4.47.2
 fqdn==1.5.1
 frozendict==2.4.6
-glog @ git+https://github.com/Jonatan-Gani/glog.git@48d911e5110bab96f91eb37f02194957b3b77f1f
+glog @ git+https://github.com/Jonatan-Gani/glog.git@6639e9f79b6e706ceaec95fca56946a8a917baf2
 greenlet==3.0.3
 h11==0.14.0
 html5lib==1.1

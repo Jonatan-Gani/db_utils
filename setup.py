@@ -4,7 +4,7 @@ setup(
     name='db_utils',
     version='3.0',
     packages=find_packages(),
-    description='Advanced PostGRE-SQL intreaction solution',
+    description='Advanced PostGRE-SQL interaction solution',
     long_description=open('README.md').read(),
     long_description_content_type='text/markdown',
     author='Jonatan Gani',
